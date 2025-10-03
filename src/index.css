@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50;
+  }
+}
+
+@layer utilities {
+  .print\:hidden {
+    @media print {
+      display: none;
+    }
+  }
+  
+  .print\:block {
+    @media print {
+      display: block;
+    }
+  }
+}
