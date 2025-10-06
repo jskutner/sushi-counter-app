@@ -61,11 +61,6 @@ const OrderForm: React.FC = () => {
       if (selectedRolls.length !== 3) {
         newErrors.threeRollCombo = 'Please select exactly 3 rolls';
       }
-      // Check for duplicates
-      const uniqueRolls = new Set(selectedRolls);
-      if (uniqueRolls.size !== selectedRolls.length) {
-        newErrors.threeRollCombo = 'Cannot select the same roll multiple times';
-      }
     }
 
     if (formData.hasSingleRoll && !formData.singleRoll) {
@@ -120,23 +115,31 @@ const OrderForm: React.FC = () => {
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Order Submitted!</h2>
             <p className="text-gray-600 mb-2">Your order has been added to the group.</p>
             <p className="text-2xl font-bold text-indigo-600 mb-6">Total: ${calculateTotal().toFixed(2)}</p>
-            <button
-              onClick={() => {
-                setFormData({
-                  name: '',
-                  hasThreeRollCombo: false,
-                  threeRollCombo: ['', '', ''],
-                  hasSingleRoll: false,
-                  singleRoll: '',
-                  beverage: '',
-                  misoSoup: false
-                });
-                setSubmitted(false);
-              }}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition mr-4"
-            >
-              Add Another Order
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setFormData({
+                    name: '',
+                    hasThreeRollCombo: false,
+                    threeRollCombo: ['', '', ''],
+                    hasSingleRoll: false,
+                    singleRoll: '',
+                    beverage: '',
+                    misoSoup: false
+                  });
+                  setSubmitted(false);
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+              >
+                Add Another Order
+              </button>
+              <button
+                onClick={() => navigate(`/manage/${orderId}`)}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+              >
+                View Orders
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -149,7 +152,13 @@ const OrderForm: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">🍣 Place Your Order</h1>
-            <p className="text-gray-600">Group Order: {order.date}</p>
+            <p className="text-gray-600 mb-4">Group Order: {order.date}</p>
+            <button
+              onClick={() => navigate(`/manage/${orderId}`)}
+              className="text-indigo-600 hover:text-indigo-700 font-medium underline"
+            >
+              View Orders
+            </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

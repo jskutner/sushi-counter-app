@@ -216,11 +216,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       paid: individualOrder.paid
     };
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('individual_orders')
-      .insert(dbIndividualOrder);
+      .insert(dbIndividualOrder)
+      .select()
+      .single();
 
     if (error) throw error;
+
+    // Update local state immediately
+    if (data) {
+      const newIndividualOrder: IndividualOrder = {
+        id: data.id,
+        name: data.name,
+        threeRollCombo: data.three_roll_combo,
+        singleRoll: data.single_roll,
+        beverage: data.beverage,
+        misoSoup: data.miso_soup,
+        total: parseFloat(data.total),
+        packaged: data.packaged,
+        paid: data.paid
+      };
+
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, orders: [...order.orders, newIndividualOrder] }
+            : order
+        )
+      );
+    }
   };
 
   const updateIndividualOrder = async (_orderId: string, individualOrderId: string, updates: Partial<IndividualOrder>): Promise<void> => {
