@@ -15,6 +15,7 @@ interface AppContextType {
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
   updateMenuItem: (id: string, updates: Partial<MenuItem>) => Promise<void>;
   deleteMenuItem: (id: string) => Promise<void>;
+  refetchMenuItems: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -285,7 +286,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       completeOrder,
       addMenuItem,
       updateMenuItem,
-      deleteMenuItem
+      deleteMenuItem,
+      refetchMenuItems: fetchMenuItems
     }}>
       {children}
     </AppContext.Provider>

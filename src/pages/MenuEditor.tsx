@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import type { MenuItem } from '../types';
 
 const MenuEditor: React.FC = () => {
-  const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem } = useAppContext();
+  const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem, refetchMenuItems } = useAppContext();
   const navigate = useNavigate();
+  const formRef = useRef<HTMLDivElement>(null);
+  const menuListRef = useRef<HTMLDivElement>(null);
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -38,7 +40,15 @@ const MenuEditor: React.FC = () => {
         await addMenuItem(newItem);
       }
       
+      // Wait for the menu to be refetched from Supabase
+      await refetchMenuItems();
+      
       resetForm();
+      
+      // Now scroll to show the updated list
+      setTimeout(() => {
+        menuListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     } catch (error) {
       console.error('Error saving menu item:', error);
       alert('Failed to save menu item. Please try again.');
@@ -53,6 +63,11 @@ const MenuEditor: React.FC = () => {
     });
     setEditingId(item.id);
     setShowAddForm(true);
+    
+    // Scroll to the form
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleDelete = async (id: string) => {
@@ -85,7 +100,14 @@ const MenuEditor: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
+            onClick={() => {
+              setShowAddForm(!showAddForm);
+              if (!showAddForm) {
+                setTimeout(() => {
+                  formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+              }
+            }}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition"
           >
             {showAddForm ? '✕ Cancel' : '+ Add New Roll'}
@@ -94,7 +116,7 @@ const MenuEditor: React.FC = () => {
 
         {/* Add/Edit Form */}
         {showAddForm && (
-          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+          <div ref={formRef} className="bg-white rounded-2xl shadow-xl p-8 mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               {editingId ? 'Edit Roll' : 'Add New Roll'}
             </h2>
@@ -159,7 +181,7 @@ const MenuEditor: React.FC = () => {
         )}
 
         {/* Menu Items List */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div ref={menuListRef} className="bg-white rounded-2xl shadow-xl p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Current Menu ({menuItems.length} items)</h2>
           
           {menuItems.length === 0 ? (
