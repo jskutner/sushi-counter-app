@@ -51,6 +51,17 @@ const OrderForm: React.FC = () => {
     );
   }
 
+  // Format date as "Monday, October 6, 2025"
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
   const calculateTotal = () => {
     let total = 0;
     if (formData.hasThreeRollCombo) total += PRICES.THREE_ROLL_COMBO;
@@ -162,8 +173,8 @@ const OrderForm: React.FC = () => {
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">🍣 Place Your Order</h1>
-            <p className="text-gray-600 mb-4">Group Order: {order.date}</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">🍣 Sushi Counter - Group Order</h1>
+            <p className="text-gray-600 mb-4">{formatDate(order.date)}</p>
             <button
               onClick={() => navigate(`/manage/${orderId}`)}
               className="text-indigo-600 hover:text-indigo-700 font-medium underline"
