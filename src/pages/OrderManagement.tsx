@@ -4,12 +4,24 @@ import { useAppContext } from '../context/AppContext';
 
 const OrderManagement: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrder, updateIndividualOrder, deleteOrder } = useAppContext();
+  const { getOrder, updateIndividualOrder, deleteOrder, completeOrder, loading } = useAppContext();
   const navigate = useNavigate();
   const [copiedLink, setCopiedLink] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
 
   const order = orderId ? getOrder(orderId) : undefined;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
+          <div className="text-4xl mb-4">🍣</div>
+          <p className="text-lg text-gray-600">Loading order...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -30,6 +42,17 @@ const OrderManagement: React.FC = () => {
   const shareableLink = `${window.location.origin}/order/${orderId}`;
   const totalAmount = order.orders.reduce((sum, o) => sum + o.total, 0);
   const packagedCount = order.orders.filter(o => o.packaged).length;
+
+  // Format date as "Monday, October 6, 2025"
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareableLink);
@@ -60,6 +83,16 @@ const OrderManagement: React.FC = () => {
     }
   };
 
+  const handleCompleteOrder = async () => {
+    try {
+      await completeOrder(orderId!);
+      setShowCompleteConfirm(false);
+    } catch (error) {
+      console.error('Error completing order:', error);
+      alert('Failed to complete order. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -67,8 +100,7 @@ const OrderManagement: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-6 print:shadow-none">
           <div className="flex items-center justify-between mb-6 print:mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Group Order</h1>
-              <p className="text-gray-600">{order.date}</p>
+              <h1 className="text-3xl font-bold text-gray-900">{formatDate(order.date)}</h1>
             </div>
             <button
               onClick={() => navigate('/')}
@@ -129,6 +161,14 @@ const OrderManagement: React.FC = () => {
             >
               🖨️ Print Order
             </button>
+            {order.status === 'active' && (
+              <button
+                onClick={() => setShowCompleteConfirm(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+              >
+                ✓ Complete
+              </button>
+            )}
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition"
@@ -237,6 +277,32 @@ const OrderManagement: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Complete Order Confirmation Modal */}
+      {showCompleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Complete Order?</h3>
+            <p className="text-gray-700 mb-6">
+              Mark this order as complete? This will move it to the Completed Orders section on the home page.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCompleteConfirm(false)}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-6 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCompleteOrder}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+              >
+                Complete Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

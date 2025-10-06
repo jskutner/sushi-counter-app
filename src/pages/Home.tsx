@@ -110,23 +110,27 @@ const Home: React.FC = () => {
 
         {completedOrders.length > 0 && (
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-800">Order History</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-800">Completed Orders</h2>
             <div className="space-y-3">
-              {completedOrders.slice(-5).reverse().map(order => (
-                <div
-                  key={order.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition cursor-pointer"
-                  onClick={() => navigate(`/history/${order.id}`)}
-                >
-                  <div>
-                    <p className="font-semibold text-gray-900">{order.date}</p>
-                    <p className="text-sm text-gray-600">
-                      {order.orders.length} participant(s) • ${order.orders.reduce((sum, o) => sum + o.total, 0).toFixed(2)}
-                    </p>
+              {completedOrders.slice(-5).reverse().map(order => {
+                const paidCount = order.orders.filter(o => o.paid).length;
+                const totalCount = order.orders.length;
+                return (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                    onClick={() => navigate(`/manage/${order.id}`)}
+                  >
+                    <div>
+                      <p className="font-semibold text-gray-900">{order.date}</p>
+                      <p className="text-sm text-gray-600">
+                        {totalCount} participant(s) • {paidCount}/{totalCount} Paid
+                      </p>
+                    </div>
+                    <span className="text-gray-600">Manage →</span>
                   </div>
-                  <span className="text-gray-600">View →</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

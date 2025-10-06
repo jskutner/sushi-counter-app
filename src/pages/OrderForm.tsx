@@ -5,7 +5,7 @@ import { BEVERAGES, PRICES } from '../types';
 
 const OrderForm: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrder, addIndividualOrder, menuItems } = useAppContext();
+  const { getOrder, addIndividualOrder, menuItems, loading } = useAppContext();
   const navigate = useNavigate();
 
   const order = orderId ? getOrder(orderId) : undefined;
@@ -22,6 +22,17 @@ const OrderForm: React.FC = () => {
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitted, setSubmitted] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
+          <div className="text-4xl mb-4">🍣</div>
+          <p className="text-lg text-gray-600">Loading order...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!order) {
     return (

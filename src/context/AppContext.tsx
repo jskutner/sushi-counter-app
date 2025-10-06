@@ -248,7 +248,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const updateIndividualOrder = async (_orderId: string, individualOrderId: string, updates: Partial<IndividualOrder>): Promise<void> => {
+  const updateIndividualOrder = async (orderId: string, individualOrderId: string, updates: Partial<IndividualOrder>): Promise<void> => {
     const dbUpdates: any = {};
     
     if (updates.name !== undefined) dbUpdates.name = updates.name;
@@ -266,6 +266,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .eq('id', individualOrderId);
 
     if (error) throw error;
+
+    // Update local state immediately
+    setOrders(prevOrders => 
+      prevOrders.map(order => 
+        order.id === orderId
+          ? {
+              ...order,
+              orders: order.orders.map(io =>
+                io.id === individualOrderId
+                  ? { ...io, ...updates }
+                  : io
+              )
+            }
+          : order
+      )
+    );
   };
 
   const completeOrder = async (orderId: string): Promise<void> => {
@@ -275,6 +291,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       .eq('id', orderId);
 
     if (error) throw error;
+
+    // Update local state immediately
+    setOrders(prevOrders =>
+      prevOrders.map(order =>
+        order.id === orderId
+          ? { ...order, status: 'completed' }
+          : order
+      )
+    );
   };
 
   const deleteOrder = async (orderId: string): Promise<void> => {

@@ -4,10 +4,21 @@ import { useAppContext } from '../context/AppContext';
 
 const PaymentTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrder, updateIndividualOrder } = useAppContext();
+  const { getOrder, updateIndividualOrder, loading } = useAppContext();
   const navigate = useNavigate();
 
   const order = orderId ? getOrder(orderId) : undefined;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
+          <div className="text-4xl mb-4">🍣</div>
+          <p className="text-lg text-gray-600">Loading order...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
