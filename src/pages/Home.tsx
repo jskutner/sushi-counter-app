@@ -8,15 +8,20 @@ const Home: React.FC = () => {
   const [showVenmoPrompt, setShowVenmoPrompt] = useState(false);
   const [venmoId, setVenmoId] = useState('');
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = async () => {
     if (!venmoId.trim()) {
       alert('Please enter your Venmo ID');
       return;
     }
-    const newOrder = createOrder(venmoId);
-    setVenmoId('');
-    setShowVenmoPrompt(false);
-    navigate(`/manage/${newOrder.id}`);
+    try {
+      const newOrder = await createOrder(venmoId);
+      setVenmoId('');
+      setShowVenmoPrompt(false);
+      navigate(`/manage/${newOrder.id}`);
+    } catch (error) {
+      console.error('Error creating order:', error);
+      alert('Failed to create order. Please try again.');
+    }
   };
 
   const activeOrders = orders.filter(o => o.status === 'active');

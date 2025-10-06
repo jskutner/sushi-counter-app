@@ -36,8 +36,13 @@ const OrderManagement: React.FC = () => {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  const handleTogglePackaged = (individualOrderId: string, currentStatus: boolean) => {
-    updateIndividualOrder(orderId!, individualOrderId, { packaged: !currentStatus });
+  const handleTogglePackaged = async (individualOrderId: string, currentStatus: boolean) => {
+    try {
+      await updateIndividualOrder(orderId!, individualOrderId, { packaged: !currentStatus });
+    } catch (error) {
+      console.error('Error updating order:', error);
+      alert('Failed to update order. Please try again.');
+    }
   };
 
   const handlePrint = () => {

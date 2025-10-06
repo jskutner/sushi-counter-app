@@ -21,24 +21,28 @@ const MenuEditor: React.FC = () => {
     setShowAddForm(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name.trim()) return;
 
-    if (editingId) {
-      updateMenuItem(editingId, formData);
-    } else {
-      const newItem: MenuItem = {
-        id: crypto.randomUUID(),
-        name: formData.name,
-        description: formData.description || undefined,
-        image: formData.image || undefined
-      };
-      addMenuItem(newItem);
+    try {
+      if (editingId) {
+        await updateMenuItem(editingId, formData);
+      } else {
+        const newItem = {
+          name: formData.name,
+          description: formData.description || undefined,
+          image: formData.image || undefined
+        };
+        await addMenuItem(newItem);
+      }
+      
+      resetForm();
+    } catch (error) {
+      console.error('Error saving menu item:', error);
+      alert('Failed to save menu item. Please try again.');
     }
-    
-    resetForm();
   };
 
   const handleEdit = (item: MenuItem) => {
@@ -51,9 +55,14 @@ const MenuEditor: React.FC = () => {
     setShowAddForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this menu item?')) {
-      deleteMenuItem(id);
+      try {
+        await deleteMenuItem(id);
+      } catch (error) {
+        console.error('Error deleting menu item:', error);
+        alert('Failed to delete menu item. Please try again.');
+      }
     }
   };
 

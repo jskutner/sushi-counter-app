@@ -1,123 +1,283 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { Order, IndividualOrder, MenuItem } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface AppContextType {
   orders: Order[];
   menuItems: MenuItem[];
-  createOrder: (venmoId: string) => Order;
+  loading: boolean;
+  createOrder: (venmoId: string) => Promise<Order>;
   getOrder: (id: string) => Order | undefined;
-  addIndividualOrder: (orderId: string, individualOrder: IndividualOrder) => void;
-  updateIndividualOrder: (orderId: string, individualOrderId: string, updates: Partial<IndividualOrder>) => void;
-  completeOrder: (orderId: string) => void;
-  addMenuItem: (item: MenuItem) => void;
-  updateMenuItem: (id: string, updates: Partial<MenuItem>) => void;
-  deleteMenuItem: (id: string) => void;
+  addIndividualOrder: (orderId: string, individualOrder: Omit<IndividualOrder, 'id'>) => Promise<void>;
+  updateIndividualOrder: (orderId: string, individualOrderId: string, updates: Partial<IndividualOrder>) => Promise<void>;
+  completeOrder: (orderId: string) => Promise<void>;
+  addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
+  updateMenuItem: (id: string, updates: Partial<MenuItem>) => Promise<void>;
+  deleteMenuItem: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  ORDERS: 'sushi-counter-orders',
-  MENU_ITEMS: 'sushi-counter-menu-items'
-};
-
-const DEFAULT_MENU_ITEMS: MenuItem[] = [
-  { id: '1', name: 'Spicy salmon', description: 'Fresh salmon with spicy mayo' },
-  { id: '2', name: 'Volcano', description: 'Tempura shrimp with spicy sauce' },
-  { id: '3', name: 'Cooked tuna', description: 'Seared tuna with teriyaki' },
-  { id: '4', name: 'Teriyaki chicken', description: 'Grilled chicken teriyaki' },
-  { id: '5', name: 'Miso eggplant', description: 'Grilled miso eggplant' },
-  { id: '6', name: 'Avo & cucumber', description: 'Fresh avocado and cucumber' },
-  { id: '7', name: 'Salmon', description: 'Classic salmon roll' },
-  { id: '8', name: 'Spicy shrimp', description: 'Shrimp with spicy mayo' },
-  { id: '9', name: 'Tempura shrimp', description: 'Crispy tempura shrimp' },
-  { id: '10', name: 'Sunshine', description: 'Mango and avocado' },
-  { id: '11', name: 'Spicy tuna', description: 'Fresh tuna with spicy mayo' }
-];
-
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ORDERS);
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.MENU_ITEMS);
-    return saved ? JSON.parse(saved) : DEFAULT_MENU_ITEMS;
-  });
-
+  // Fetch all data on mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
-  }, [orders]);
+    fetchData();
+    setupRealtimeSubscriptions();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MENU_ITEMS, JSON.stringify(menuItems));
-  }, [menuItems]);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch menu items
+      const { data: menuData, error: menuError } = await supabase
+        .from('menu_items')
+        .select('*')
+        .order('name');
+      
+      if (menuError) throw menuError;
+      setMenuItems(menuData || []);
 
-  const createOrder = (venmoId: string): Order => {
-    const newOrder: Order = {
-      id: crypto.randomUUID(),
+      // Fetch orders with their individual orders
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          individual_orders (*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (ordersError) throw ordersError;
+      
+      // Transform the data to match our Order type
+      const transformedOrders: Order[] = (ordersData || []).map(order => ({
+        id: order.id,
+        date: order.date,
+        venmoId: order.venmo_id,
+        status: order.status as 'active' | 'completed',
+        orders: (order.individual_orders || []).map((io: any) => ({
+          id: io.id,
+          name: io.name,
+          threeRollCombo: io.three_roll_combo,
+          singleRoll: io.single_roll,
+          beverage: io.beverage,
+          misoSoup: io.miso_soup,
+          total: parseFloat(io.total),
+          packaged: io.packaged,
+          paid: io.paid
+        }))
+      }));
+
+      setOrders(transformedOrders);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setupRealtimeSubscriptions = () => {
+    // Subscribe to menu items changes
+    const menuSubscription = supabase
+      .channel('menu_items_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'menu_items' },
+        () => {
+          // Refetch menu items when they change
+          fetchMenuItems();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to orders changes
+    const ordersSubscription = supabase
+      .channel('orders_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          // Refetch orders when they change
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to individual orders changes
+    const individualOrdersSubscription = supabase
+      .channel('individual_orders_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'individual_orders' },
+        () => {
+          // Refetch orders when individual orders change
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      menuSubscription.unsubscribe();
+      ordersSubscription.unsubscribe();
+      individualOrdersSubscription.unsubscribe();
+    };
+  };
+
+  const fetchMenuItems = async () => {
+    const { data, error } = await supabase
+      .from('menu_items')
+      .select('*')
+      .order('name');
+    
+    if (!error && data) {
+      setMenuItems(data);
+    }
+  };
+
+  const fetchOrders = async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        individual_orders (*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      const transformedOrders: Order[] = data.map(order => ({
+        id: order.id,
+        date: order.date,
+        venmoId: order.venmo_id,
+        status: order.status as 'active' | 'completed',
+        orders: (order.individual_orders || []).map((io: any) => ({
+          id: io.id,
+          name: io.name,
+          threeRollCombo: io.three_roll_combo,
+          singleRoll: io.single_roll,
+          beverage: io.beverage,
+          misoSoup: io.miso_soup,
+          total: parseFloat(io.total),
+          packaged: io.packaged,
+          paid: io.paid
+        }))
+      }));
+      setOrders(transformedOrders);
+    }
+  };
+
+  const createOrder = async (venmoId: string): Promise<Order> => {
+    const newOrder = {
       date: new Date().toISOString().split('T')[0],
-      venmoId,
-      orders: [],
+      venmo_id: venmoId,
       status: 'active'
     };
-    setOrders(prev => [...prev, newOrder]);
-    return newOrder;
+
+    const { data, error } = await supabase
+      .from('orders')
+      .insert(newOrder)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const order: Order = {
+      id: data.id,
+      date: data.date,
+      venmoId: data.venmo_id,
+      status: data.status,
+      orders: []
+    };
+
+    return order;
   };
 
   const getOrder = (id: string): Order | undefined => {
     return orders.find(order => order.id === id);
   };
 
-  const addIndividualOrder = (orderId: string, individualOrder: IndividualOrder) => {
-    setOrders(prev => prev.map(order => 
-      order.id === orderId
-        ? { ...order, orders: [...order.orders, individualOrder] }
-        : order
-    ));
+  const addIndividualOrder = async (orderId: string, individualOrder: Omit<IndividualOrder, 'id'>): Promise<void> => {
+    const dbIndividualOrder = {
+      order_id: orderId,
+      name: individualOrder.name,
+      three_roll_combo: individualOrder.threeRollCombo,
+      single_roll: individualOrder.singleRoll,
+      beverage: individualOrder.beverage,
+      miso_soup: individualOrder.misoSoup,
+      total: individualOrder.total,
+      packaged: individualOrder.packaged,
+      paid: individualOrder.paid
+    };
+
+    const { error } = await supabase
+      .from('individual_orders')
+      .insert(dbIndividualOrder);
+
+    if (error) throw error;
   };
 
-  const updateIndividualOrder = (orderId: string, individualOrderId: string, updates: Partial<IndividualOrder>) => {
-    setOrders(prev => prev.map(order => 
-      order.id === orderId
-        ? {
-            ...order,
-            orders: order.orders.map(io =>
-              io.id === individualOrderId ? { ...io, ...updates } : io
-            )
-          }
-        : order
-    ));
+  const updateIndividualOrder = async (_orderId: string, individualOrderId: string, updates: Partial<IndividualOrder>): Promise<void> => {
+    const dbUpdates: any = {};
+    
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.threeRollCombo !== undefined) dbUpdates.three_roll_combo = updates.threeRollCombo;
+    if (updates.singleRoll !== undefined) dbUpdates.single_roll = updates.singleRoll;
+    if (updates.beverage !== undefined) dbUpdates.beverage = updates.beverage;
+    if (updates.misoSoup !== undefined) dbUpdates.miso_soup = updates.misoSoup;
+    if (updates.total !== undefined) dbUpdates.total = updates.total;
+    if (updates.packaged !== undefined) dbUpdates.packaged = updates.packaged;
+    if (updates.paid !== undefined) dbUpdates.paid = updates.paid;
+
+    const { error } = await supabase
+      .from('individual_orders')
+      .update(dbUpdates)
+      .eq('id', individualOrderId);
+
+    if (error) throw error;
   };
 
-  const completeOrder = (orderId: string) => {
-    setOrders(prev => prev.map(order => 
-      order.id === orderId
-        ? { ...order, status: 'completed' as const }
-        : order
-    ));
+  const completeOrder = async (orderId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'completed' })
+      .eq('id', orderId);
+
+    if (error) throw error;
   };
 
-  const addMenuItem = (item: MenuItem) => {
-    setMenuItems(prev => [...prev, item]);
+  const addMenuItem = async (item: Omit<MenuItem, 'id'>): Promise<void> => {
+    const { error } = await supabase
+      .from('menu_items')
+      .insert(item);
+
+    if (error) throw error;
   };
 
-  const updateMenuItem = (id: string, updates: Partial<MenuItem>) => {
-    setMenuItems(prev => prev.map(item =>
-      item.id === id ? { ...item, ...updates } : item
-    ));
+  const updateMenuItem = async (id: string, updates: Partial<MenuItem>): Promise<void> => {
+    const { error } = await supabase
+      .from('menu_items')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) throw error;
   };
 
-  const deleteMenuItem = (id: string) => {
-    setMenuItems(prev => prev.filter(item => item.id !== id));
+  const deleteMenuItem = async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('menu_items')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   };
 
   return (
     <AppContext.Provider value={{
       orders,
       menuItems,
+      loading,
       createOrder,
       getOrder,
       addIndividualOrder,
@@ -139,4 +299,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-

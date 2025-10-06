@@ -29,8 +29,13 @@ const PaymentTracking: React.FC = () => {
   const totalCollected = order.orders.filter(o => o.paid).reduce((sum, o) => sum + o.total, 0);
   const paidCount = order.orders.filter(o => o.paid).length;
 
-  const handleTogglePaid = (individualOrderId: string, currentStatus: boolean) => {
-    updateIndividualOrder(orderId!, individualOrderId, { paid: !currentStatus });
+  const handleTogglePaid = async (individualOrderId: string, currentStatus: boolean) => {
+    try {
+      await updateIndividualOrder(orderId!, individualOrderId, { paid: !currentStatus });
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      alert('Failed to update payment status. Please try again.');
+    }
   };
 
   return (

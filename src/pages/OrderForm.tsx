@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import type { IndividualOrder } from '../types';
 import { BEVERAGES, PRICES } from '../types';
 
 const OrderForm: React.FC = () => {
@@ -81,13 +80,12 @@ const OrderForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validate()) return;
 
-    const individualOrder: IndividualOrder = {
-      id: crypto.randomUUID(),
+    const individualOrder = {
       name: formData.name,
       threeRollCombo: formData.hasThreeRollCombo ? formData.threeRollCombo.filter(r => r) : undefined,
       singleRoll: formData.hasSingleRoll ? formData.singleRoll : undefined,
@@ -98,8 +96,13 @@ const OrderForm: React.FC = () => {
       paid: false
     };
 
-    addIndividualOrder(orderId!, individualOrder);
-    setSubmitted(true);
+    try {
+      await addIndividualOrder(orderId!, individualOrder);
+      setSubmitted(true);
+    } catch (error) {
+      console.error('Error submitting order:', error);
+      alert('Failed to submit order. Please try again.');
+    }
   };
 
   const handleRollChange = (index: number, value: string) => {
