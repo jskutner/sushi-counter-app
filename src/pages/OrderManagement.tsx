@@ -4,9 +4,10 @@ import { useAppContext } from '../context/AppContext';
 
 const OrderManagement: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrder, updateIndividualOrder } = useAppContext();
+  const { getOrder, updateIndividualOrder, deleteOrder } = useAppContext();
   const navigate = useNavigate();
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const order = orderId ? getOrder(orderId) : undefined;
 
@@ -47,6 +48,16 @@ const OrderManagement: React.FC = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDeleteOrder = async () => {
+    try {
+      await deleteOrder(orderId!);
+      navigate('/');
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      alert('Failed to delete order. Please try again.');
+    }
   };
 
   return (
@@ -117,6 +128,12 @@ const OrderManagement: React.FC = () => {
               className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition"
             >
               🖨️ Print Order
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+            >
+              🗑️ Delete
             </button>
           </div>
         </div>
@@ -220,6 +237,32 @@ const OrderManagement: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Delete Order?</h3>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete this order? This action cannot be undone and will permanently remove all {order.orders.length} individual order{order.orders.length !== 1 ? 's' : ''}.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-6 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteOrder}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+              >
+                Delete Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
