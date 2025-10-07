@@ -8,6 +8,8 @@ const PaymentTracking: React.FC = () => {
   const navigate = useNavigate();
   const order = orderId ? getOrder(orderId) : undefined;
   const [tip, setTip] = useState<string>('');
+  const [savingTip, setSavingTip] = useState<boolean>(false);
+  const [tipSaved, setTipSaved] = useState<boolean>(false);
 
   // Initialize tip from order when order is loaded
   useEffect(() => {
@@ -25,11 +27,19 @@ const PaymentTracking: React.FC = () => {
     // Only update if the tip value is different from what's in the order
     if (tipAmount === order.tip) return;
 
+    setSavingTip(true);
+    setTipSaved(false);
+
     const timeoutId = setTimeout(async () => {
       try {
         await updateTip(orderId, tipAmount);
+        setSavingTip(false);
+        setTipSaved(true);
+        // Hide "Saved!" message after 2 seconds
+        setTimeout(() => setTipSaved(false), 2000);
       } catch (error) {
         console.error('Error updating tip:', error);
+        setSavingTip(false);
       }
     }, 500); // Wait 500ms after user stops typing
 
@@ -106,9 +116,17 @@ const PaymentTracking: React.FC = () => {
 
           {/* Tip Input */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Add Tip (split among all {numberOfPeople} people)
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Add Tip (split among all {numberOfPeople} people)
+              </label>
+              {savingTip && (
+                <span className="text-xs text-gray-500 italic">Saving...</span>
+              )}
+              {tipSaved && (
+                <span className="text-xs text-green-600 font-semibold">✓ Saved!</span>
+              )}
+            </div>
             <div className="flex gap-2 items-center">
               <span className="text-2xl font-bold text-gray-700">$</span>
               <input
