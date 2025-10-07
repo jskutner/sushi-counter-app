@@ -16,6 +16,7 @@ export interface Order {
   venmoId: string;
   orders: IndividualOrder[];
   status: 'active' | 'completed';
+  tip: number;
 }
 
 export interface MenuItem {

@@ -12,6 +12,7 @@ interface AppContextType {
   addIndividualOrder: (orderId: string, individualOrder: Omit<IndividualOrder, 'id'>) => Promise<void>;
   updateIndividualOrder: (orderId: string, individualOrderId: string, updates: Partial<IndividualOrder>) => Promise<void>;
   deleteIndividualOrder: (orderId: string, individualOrderId: string) => Promise<void>;
+  updateTip: (orderId: string, tip: number) => Promise<void>;
   completeOrder: (orderId: string) => Promise<void>;
   deleteOrder: (orderId: string) => Promise<void>;
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
@@ -63,6 +64,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         date: order.date,
         venmoId: order.venmo_id,
         status: order.status as 'active' | 'completed',
+        tip: parseFloat(order.tip) || 0,
         orders: (order.individual_orders || []).map((io: any) => ({
           id: io.id,
           name: io.name,
@@ -191,6 +193,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       date: data.date,
       venmoId: data.venmo_id,
       status: data.status,
+      tip: parseFloat(data.tip) || 0,
       orders: []
     };
 
@@ -306,6 +309,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
+  const updateTip = async (orderId: string, tip: number): Promise<void> => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ tip })
+      .eq('id', orderId);
+
+    if (error) throw error;
+
+    // Update local state immediately
+    setOrders(prevOrders =>
+      prevOrders.map(order =>
+        order.id === orderId
+          ? { ...order, tip }
+          : order
+      )
+    );
+  };
+
   const completeOrder = async (orderId: string): Promise<void> => {
     const { error } = await supabase
       .from('orders')
@@ -372,6 +393,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       addIndividualOrder,
       updateIndividualOrder,
       deleteIndividualOrder,
+      updateTip,
       completeOrder,
       deleteOrder,
       addMenuItem,

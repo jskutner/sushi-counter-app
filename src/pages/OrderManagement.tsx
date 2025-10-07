@@ -43,7 +43,8 @@ const OrderManagement: React.FC = () => {
 
   const shareableLink = `${window.location.origin}/order/${orderId}`;
   const inStoreLink = `${window.location.origin}/instore/${orderId}`;
-  const totalAmount = order.orders.reduce((sum, o) => sum + o.total, 0);
+  const subtotal = order.orders.reduce((sum, o) => sum + o.total, 0);
+  const totalAmount = subtotal + order.tip;
   const packagedCount = order.orders.filter(o => o.packaged).length;
 
   // Format date as "Monday, October 6, 2025"

@@ -1,14 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 
 const PaymentTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrder, updateIndividualOrder, loading } = useAppContext();
+  const { getOrder, updateIndividualOrder, updateTip, loading } = useAppContext();
   const navigate = useNavigate();
+  const order = orderId ? getOrder(orderId) : undefined;
   const [tip, setTip] = useState<string>('');
 
-  const order = orderId ? getOrder(orderId) : undefined;
+  // Initialize tip from order when order is loaded
+  useEffect(() => {
+    if (order && order.tip > 0) {
+      setTip(order.tip.toString());
+    }
+  }, [order?.id]);
+
+  // Save tip to database after user stops typing (debounced)
+  useEffect(() => {
+    if (!orderId || !order) return;
+    
+    const tipAmount = parseFloat(tip) || 0;
+    
+    // Only update if the tip value is different from what's in the order
+    if (tipAmount === order.tip) return;
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        await updateTip(orderId, tipAmount);
+      } catch (error) {
+        console.error('Error updating tip:', error);
+      }
+    }, 500); // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timeoutId);
+  }, [tip, orderId]);
 
   if (loading) {
     return (
@@ -37,8 +63,8 @@ const PaymentTracking: React.FC = () => {
     );
   }
 
-  const tipAmount = parseFloat(tip) || 0;
-  const numberOfPeople = order.orders.length;
+  const tipAmount = order?.tip || 0;
+  const numberOfPeople = order?.orders.length || 0;
   const tipPerPerson = numberOfPeople > 0 ? tipAmount / numberOfPeople : 0;
   
   const totalDue = order.orders.reduce((sum, o) => sum + o.total, 0);
