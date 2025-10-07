@@ -148,9 +148,13 @@ const OrderManagement: React.FC = () => {
               </div>
               <div className="flex flex-col items-center gap-1">
                 <label className="text-xs font-semibold text-gray-700">In Store View</label>
-                <div className="bg-white p-2 rounded-lg border border-indigo-300">
+                <button
+                  onClick={() => navigate(`/instore/${orderId}`)}
+                  className="bg-white p-2 rounded-lg border border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 transition cursor-pointer"
+                  title="Click to open In Store view"
+                >
                   <QRCodeSVG value={inStoreLink} size={80} />
-                </div>
+                </button>
               </div>
             </div>
           </div>
