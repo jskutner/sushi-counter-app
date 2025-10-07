@@ -157,6 +157,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         date: order.date,
         venmoId: order.venmo_id,
         status: order.status as 'active' | 'completed',
+        tip: parseFloat(order.tip) || 0,
         orders: (order.individual_orders || []).map((io: any) => ({
           id: io.id,
           name: io.name,
