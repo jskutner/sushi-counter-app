@@ -389,7 +389,7 @@ const PaymentTracking: React.FC = () => {
             pointerEvents: 'none'
           }}
         >
-          🪙
+          💰
         </div>
       ))}
 
