@@ -46,7 +46,7 @@ const Home: React.FC = () => {
               onClick={() => setShowVenmoPrompt(true)}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-8 rounded-lg transition duration-200 shadow-lg hover:shadow-xl"
             >
-              Create Order
+              Create Group Order
             </button>
           ) : (
             <div className="space-y-4">
