@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 
@@ -6,6 +6,7 @@ const PaymentTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { getOrder, updateIndividualOrder, loading } = useAppContext();
   const navigate = useNavigate();
+  const [tip, setTip] = useState<string>('');
 
   const order = orderId ? getOrder(orderId) : undefined;
 
@@ -36,8 +37,13 @@ const PaymentTracking: React.FC = () => {
     );
   }
 
+  const tipAmount = parseFloat(tip) || 0;
+  const numberOfPeople = order.orders.length;
+  const tipPerPerson = numberOfPeople > 0 ? tipAmount / numberOfPeople : 0;
+  
   const totalDue = order.orders.reduce((sum, o) => sum + o.total, 0);
-  const totalCollected = order.orders.filter(o => o.paid).reduce((sum, o) => sum + o.total, 0);
+  const totalWithTip = totalDue + tipAmount;
+  const totalCollected = order.orders.filter(o => o.paid).reduce((sum, o) => sum + o.total + tipPerPerson, 0);
   const paidCount = order.orders.filter(o => o.paid).length;
 
   const handleTogglePaid = async (individualOrderId: string, currentStatus: boolean) => {
@@ -72,11 +78,39 @@ const PaymentTracking: React.FC = () => {
             </button>
           </div>
 
+          {/* Tip Input */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Add Tip (split among all {numberOfPeople} people)
+            </label>
+            <div className="flex gap-2 items-center">
+              <span className="text-2xl font-bold text-gray-700">$</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={tip}
+                onChange={(e) => setTip(e.target.value)}
+                placeholder="0.00"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-lg"
+              />
+              {tipAmount > 0 && (
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Per person:</p>
+                  <p className="text-lg font-bold text-yellow-700">${tipPerPerson.toFixed(2)}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-blue-50 rounded-lg p-4 text-center">
               <p className="text-sm text-gray-600">Total Due</p>
-              <p className="text-2xl font-bold text-blue-600">${totalDue.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-blue-600">${totalWithTip.toFixed(2)}</p>
+              {tipAmount > 0 && (
+                <p className="text-xs text-gray-500 mt-1">includes ${tipAmount.toFixed(2)} tip</p>
+              )}
             </div>
             <div className="bg-green-50 rounded-lg p-4 text-center">
               <p className="text-sm text-gray-600">Collected</p>
@@ -84,7 +118,7 @@ const PaymentTracking: React.FC = () => {
             </div>
             <div className="bg-purple-50 rounded-lg p-4 text-center">
               <p className="text-sm text-gray-600">Outstanding</p>
-              <p className="text-2xl font-bold text-purple-600">${(totalDue - totalCollected).toFixed(2)}</p>
+              <p className="text-2xl font-bold text-purple-600">${(totalWithTip - totalCollected).toFixed(2)}</p>
             </div>
           </div>
 
@@ -145,9 +179,16 @@ const PaymentTracking: React.FC = () => {
                     </div>
 
                     <div className="text-right ml-4">
-                      <p className="text-2xl font-bold text-indigo-600 mb-3">
-                        ${individualOrder.total.toFixed(2)}
-                      </p>
+                      <div className="mb-3">
+                        <p className="text-2xl font-bold text-indigo-600">
+                          ${(individualOrder.total + tipPerPerson).toFixed(2)}
+                        </p>
+                        {tipAmount > 0 && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            ${individualOrder.total.toFixed(2)} + ${tipPerPerson.toFixed(2)} tip
+                          </p>
+                        )}
+                      </div>
                       <button
                         onClick={() => handleTogglePaid(individualOrder.id, individualOrder.paid)}
                         className={`px-6 py-2 rounded-lg font-semibold transition ${
@@ -170,8 +211,18 @@ const PaymentTracking: React.FC = () => {
             <div className="border-t border-gray-300 mt-6 pt-6">
               <div className="space-y-2">
                 <div className="flex justify-between text-lg">
-                  <span className="text-gray-700">Total Amount:</span>
+                  <span className="text-gray-700">Subtotal (Food):</span>
                   <span className="font-semibold text-gray-900">${totalDue.toFixed(2)}</span>
+                </div>
+                {tipAmount > 0 && (
+                  <div className="flex justify-between text-lg">
+                    <span className="text-gray-700">Tip:</span>
+                    <span className="font-semibold text-yellow-700">${tipAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg border-t border-gray-200 pt-2">
+                  <span className="text-gray-700">Total Amount:</span>
+                  <span className="font-semibold text-gray-900">${totalWithTip.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-lg">
                   <span className="text-gray-700">Amount Collected:</span>
@@ -179,8 +230,8 @@ const PaymentTracking: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-xl font-bold border-t border-gray-200 pt-2 mt-2">
                   <span className="text-gray-900">Outstanding:</span>
-                  <span className={totalDue - totalCollected > 0 ? 'text-red-600' : 'text-green-600'}>
-                    ${(totalDue - totalCollected).toFixed(2)}
+                  <span className={totalWithTip - totalCollected > 0 ? 'text-red-600' : 'text-green-600'}>
+                    ${(totalWithTip - totalCollected).toFixed(2)}
                   </span>
                 </div>
               </div>

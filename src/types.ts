@@ -31,9 +31,10 @@ export const BEVERAGES = [
   'Lemon lime & bitters'
 ];
 
+// Prices include 8.875% sales tax
 export const PRICES = {
-  THREE_ROLL_COMBO: 12,
-  SINGLE_ROLL: 5,
-  BEVERAGE: 3,
-  MISO_SOUP: 2
+  THREE_ROLL_COMBO: 13.07,
+  SINGLE_ROLL: 5.44,
+  BEVERAGE: 3.27,
+  MISO_SOUP: 2.18
 };
