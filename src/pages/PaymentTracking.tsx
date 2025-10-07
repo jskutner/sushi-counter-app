@@ -4,17 +4,26 @@ import { useAppContext } from '../context/AppContext';
 
 const PaymentTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrder, updateIndividualOrder, updateTip, loading } = useAppContext();
+  const { getOrder, updateIndividualOrder, updateTip, updateVenmoId, loading } = useAppContext();
   const navigate = useNavigate();
   const order = orderId ? getOrder(orderId) : undefined;
   const [tip, setTip] = useState<string>('');
   const [savingTip, setSavingTip] = useState<boolean>(false);
   const [tipSaved, setTipSaved] = useState<boolean>(false);
+  const [editingVenmo, setEditingVenmo] = useState<boolean>(false);
+  const [venmoId, setVenmoId] = useState<string>('');
 
   // Initialize tip from order when order is loaded
   useEffect(() => {
     if (order && order.tip > 0) {
       setTip(order.tip.toString());
+    }
+  }, [order?.id]);
+
+  // Initialize venmoId from order when order is loaded
+  useEffect(() => {
+    if (order && order.venmoId) {
+      setVenmoId(order.venmoId);
     }
   }, [order?.id]);
 
@@ -91,6 +100,17 @@ const PaymentTracking: React.FC = () => {
     }
   };
 
+  const handleSaveVenmoId = async () => {
+    if (!orderId) return;
+    try {
+      await updateVenmoId(orderId, venmoId);
+      setEditingVenmo(false);
+    } catch (error) {
+      console.error('Error updating Venmo ID:', error);
+      alert('Failed to update Venmo ID. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -101,9 +121,49 @@ const PaymentTracking: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">💰 Payment Tracking</h1>
               <p className="text-gray-600">{order.date}</p>
               {order.venmoId && (
-                <p className="text-lg text-gray-700 mt-2">
-                  <span className="font-semibold">Pay to:</span> {order.venmoId}
-                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-lg text-gray-700">
+                    <span className="font-semibold">Pay to:</span>{' '}
+                    {!editingVenmo ? (
+                      <span>{order.venmoId}</span>
+                    ) : (
+                      <input
+                        type="text"
+                        value={venmoId}
+                        onChange={(e) => setVenmoId(e.target.value)}
+                        className="inline-block px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        placeholder="@username"
+                      />
+                    )}
+                  </span>
+                  {!editingVenmo ? (
+                    <button
+                      onClick={() => setEditingVenmo(true)}
+                      className="text-gray-500 hover:text-indigo-600 transition"
+                      title="Edit Venmo ID"
+                    >
+                      ✏️
+                    </button>
+                  ) : (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={handleSaveVenmoId}
+                        className="text-green-600 hover:text-green-700 font-semibold px-2 py-1 text-sm"
+                      >
+                        ✓ Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVenmoId(order.venmoId);
+                          setEditingVenmo(false);
+                        }}
+                        className="text-gray-600 hover:text-gray-700 font-semibold px-2 py-1 text-sm"
+                      >
+                        ✕ Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             <button

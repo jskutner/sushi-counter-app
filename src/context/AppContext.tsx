@@ -13,6 +13,7 @@ interface AppContextType {
   updateIndividualOrder: (orderId: string, individualOrderId: string, updates: Partial<IndividualOrder>) => Promise<void>;
   deleteIndividualOrder: (orderId: string, individualOrderId: string) => Promise<void>;
   updateTip: (orderId: string, tip: number) => Promise<void>;
+  updateVenmoId: (orderId: string, venmoId: string) => Promise<void>;
   completeOrder: (orderId: string) => Promise<void>;
   deleteOrder: (orderId: string) => Promise<void>;
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
@@ -328,6 +329,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
+  const updateVenmoId = async (orderId: string, venmoId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ venmo_id: venmoId })
+      .eq('id', orderId);
+
+    if (error) throw error;
+
+    // Update local state immediately
+    setOrders(prevOrders =>
+      prevOrders.map(order =>
+        order.id === orderId
+          ? { ...order, venmoId }
+          : order
+      )
+    );
+  };
+
   const completeOrder = async (orderId: string): Promise<void> => {
     const { error } = await supabase
       .from('orders')
@@ -395,6 +414,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updateIndividualOrder,
       deleteIndividualOrder,
       updateTip,
+      updateVenmoId,
       completeOrder,
       deleteOrder,
       addMenuItem,
