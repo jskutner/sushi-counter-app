@@ -11,6 +11,7 @@ interface AppContextType {
   getOrder: (id: string) => Order | undefined;
   addIndividualOrder: (orderId: string, individualOrder: Omit<IndividualOrder, 'id'>) => Promise<void>;
   updateIndividualOrder: (orderId: string, individualOrderId: string, updates: Partial<IndividualOrder>) => Promise<void>;
+  deleteIndividualOrder: (orderId: string, individualOrderId: string) => Promise<void>;
   completeOrder: (orderId: string) => Promise<void>;
   deleteOrder: (orderId: string) => Promise<void>;
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
@@ -284,6 +285,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
+  const deleteIndividualOrder = async (orderId: string, individualOrderId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('individual_orders')
+      .delete()
+      .eq('id', individualOrderId);
+
+    if (error) throw error;
+
+    // Update local state immediately
+    setOrders(prevOrders =>
+      prevOrders.map(order =>
+        order.id === orderId
+          ? {
+              ...order,
+              orders: order.orders.filter(io => io.id !== individualOrderId)
+            }
+          : order
+      )
+    );
+  };
+
   const completeOrder = async (orderId: string): Promise<void> => {
     const { error } = await supabase
       .from('orders')
@@ -349,6 +371,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       getOrder,
       addIndividualOrder,
       updateIndividualOrder,
+      deleteIndividualOrder,
       completeOrder,
       deleteOrder,
       addMenuItem,

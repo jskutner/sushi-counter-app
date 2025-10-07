@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { QRCodeSVG } from 'qrcode.react';
 
 const OrderManagement: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrder, updateIndividualOrder, deleteOrder, completeOrder, loading } = useAppContext();
+  const { getOrder, updateIndividualOrder, deleteIndividualOrder, deleteOrder, completeOrder, loading } = useAppContext();
   const navigate = useNavigate();
   const [copiedLink, setCopiedLink] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [deletingIndividualOrderId, setDeletingIndividualOrderId] = useState<string | null>(null);
 
   const order = orderId ? getOrder(orderId) : undefined;
 
@@ -40,6 +42,7 @@ const OrderManagement: React.FC = () => {
   }
 
   const shareableLink = `${window.location.origin}/order/${orderId}`;
+  const inStoreLink = `${window.location.origin}/instore/${orderId}`;
   const totalAmount = order.orders.reduce((sum, o) => sum + o.total, 0);
   const packagedCount = order.orders.filter(o => o.packaged).length;
 
@@ -93,6 +96,17 @@ const OrderManagement: React.FC = () => {
     }
   };
 
+  const handleDeleteIndividualOrder = async () => {
+    if (!deletingIndividualOrderId) return;
+    try {
+      await deleteIndividualOrder(orderId!, deletingIndividualOrderId);
+      setDeletingIndividualOrderId(null);
+    } catch (error) {
+      console.error('Error deleting individual order:', error);
+      alert('Failed to delete order. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -112,22 +126,32 @@ const OrderManagement: React.FC = () => {
 
           {/* Share Link */}
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4 print:hidden">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Shareable Link
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={shareableLink}
-                readOnly
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white"
-              />
-              <button
-                onClick={handleCopyLink}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-lg transition"
-              >
-                {copiedLink ? '✓ Copied!' : 'Copy'}
-              </button>
+            <div className="flex gap-4 items-start">
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Shareable Link
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={shareableLink}
+                    readOnly
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white"
+                  />
+                  <button
+                    onClick={handleCopyLink}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-lg transition"
+                  >
+                    {copiedLink ? '✓ Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <label className="text-xs font-semibold text-gray-700">In Store View</label>
+                <div className="bg-white p-2 rounded-lg border border-indigo-300">
+                  <QRCodeSVG value={inStoreLink} size={80} />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -148,16 +172,16 @@ const OrderManagement: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 print:hidden">
+          <div className="flex flex-wrap gap-3 print:hidden">
             <button
               onClick={() => navigate(`/payment/${orderId}`)}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+              className="flex-1 min-w-[150px] bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition"
             >
               💰 Payment Tracking
             </button>
             <button
               onClick={handlePrint}
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+              className="flex-1 min-w-[150px] bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition"
             >
               🖨️ Print Order
             </button>
@@ -166,7 +190,7 @@ const OrderManagement: React.FC = () => {
                 onClick={() => setShowCompleteConfirm(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
               >
-                ✓ Complete
+                ✓ Close Order
               </button>
             )}
             <button
@@ -245,20 +269,29 @@ const OrderManagement: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="text-right ml-4">
-                      <p className="text-2xl font-bold text-indigo-600 mb-3">
+                    <div className="text-right ml-4 flex flex-col items-end gap-2">
+                      <p className="text-2xl font-bold text-indigo-600">
                         ${individualOrder.total.toFixed(2)}
                       </p>
-                      <button
-                        onClick={() => handleTogglePackaged(individualOrder.id, individualOrder.packaged)}
-                        className={`px-4 py-2 rounded-lg font-semibold transition print:hidden ${
-                          individualOrder.packaged
-                            ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                            : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`}
-                      >
-                        {individualOrder.packaged ? 'Unmark' : 'Mark Packaged'}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleTogglePackaged(individualOrder.id, individualOrder.packaged)}
+                          className={`px-4 py-2 rounded-lg font-semibold transition print:hidden ${
+                            individualOrder.packaged
+                              ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                              : 'bg-green-600 hover:bg-green-700 text-white'
+                          }`}
+                        >
+                          {individualOrder.packaged ? 'Unmark' : 'Mark Packaged'}
+                        </button>
+                        <button
+                          onClick={() => setDeletingIndividualOrderId(individualOrder.id)}
+                          className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition print:hidden"
+                          title="Delete order"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -277,6 +310,32 @@ const OrderManagement: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Delete Individual Order Confirmation Modal */}
+      {deletingIndividualOrderId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Delete This Order?</h3>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete this individual order? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingIndividualOrderId(null)}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-6 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteIndividualOrder}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Complete Order Confirmation Modal */}
       {showCompleteConfirm && (

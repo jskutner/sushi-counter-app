@@ -7,6 +7,7 @@ import PaymentTracking from './pages/PaymentTracking';
 import OrderHistory from './pages/OrderHistory';
 import MenuDisplay from './pages/MenuDisplay';
 import MenuEditor from './pages/MenuEditor';
+import InStore from './pages/InStore';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/manage/:orderId" element={<OrderManagement />} />
           <Route path="/payment/:orderId" element={<PaymentTracking />} />
           <Route path="/history/:orderId" element={<OrderHistory />} />
+          <Route path="/instore/:orderId" element={<InStore />} />
           <Route path="/menu" element={<MenuDisplay />} />
           <Route path="/menu-editor" element={<MenuEditor />} />
         </Routes>
