@@ -11,22 +11,12 @@ interface Coin {
 
 const PaymentTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrder, updateIndividualOrder, updateTip, updateVenmoId, loading } = useAppContext();
+  const { getOrder, updateIndividualOrder, updateVenmoId, loading } = useAppContext();
   const navigate = useNavigate();
   const order = orderId ? getOrder(orderId) : undefined;
-  const [tip, setTip] = useState<string>('');
-  const [savingTip, setSavingTip] = useState<boolean>(false);
-  const [tipSaved, setTipSaved] = useState<boolean>(false);
   const [editingVenmo, setEditingVenmo] = useState<boolean>(false);
   const [venmoId, setVenmoId] = useState<string>('');
   const [coins, setCoins] = useState<Coin[]>([]);
-
-  // Initialize tip from order when order is loaded
-  useEffect(() => {
-    if (order && order.tip > 0) {
-      setTip(order.tip.toString());
-    }
-  }, [order?.id]);
 
   // Initialize venmoId from order when order is loaded
   useEffect(() => {
@@ -34,34 +24,6 @@ const PaymentTracking: React.FC = () => {
       setVenmoId(order.venmoId);
     }
   }, [order?.id]);
-
-  // Save tip to database after user stops typing (debounced)
-  useEffect(() => {
-    if (!orderId || !order) return;
-    
-    const tipAmount = parseFloat(tip) || 0;
-    
-    // Only update if the tip value is different from what's in the order
-    if (tipAmount === order.tip) return;
-
-    setSavingTip(true);
-    setTipSaved(false);
-
-    const timeoutId = setTimeout(async () => {
-      try {
-        await updateTip(orderId, tipAmount);
-        setSavingTip(false);
-        setTipSaved(true);
-        // Hide "Saved!" message after 2 seconds
-        setTimeout(() => setTipSaved(false), 2000);
-      } catch (error) {
-        console.error('Error updating tip:', error);
-        setSavingTip(false);
-      }
-    }, 500); // Wait 500ms after user stops typing
-
-    return () => clearTimeout(timeoutId);
-  }, [tip, orderId]);
 
   if (loading) {
     return (
@@ -202,39 +164,6 @@ const PaymentTracking: React.FC = () => {
             >
               ← Back to Order
             </button>
-          </div>
-
-          {/* Tip Input */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-semibold text-gray-700">
-                Add Tip (split among all {numberOfPeople} people)
-              </label>
-              {savingTip && (
-                <span className="text-xs text-gray-500 italic">Saving...</span>
-              )}
-              {tipSaved && (
-                <span className="text-xs text-green-600 font-semibold">✓ Saved!</span>
-              )}
-            </div>
-            <div className="flex gap-2 items-center">
-              <span className="text-2xl font-bold text-gray-700">$</span>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={tip}
-                onChange={(e) => setTip(e.target.value)}
-                placeholder="0.00"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-lg"
-              />
-              {tipAmount > 0 && (
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Per person:</p>
-                  <p className="text-lg font-bold text-yellow-700">${tipPerPerson.toFixed(2)}</p>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Stats */}

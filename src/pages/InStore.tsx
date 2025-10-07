@@ -1,13 +1,22 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 
 const InStore: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { getOrder, updateIndividualOrder, loading } = useAppContext();
+  const { getOrder, updateIndividualOrder, updateTip, loading } = useAppContext();
   const navigate = useNavigate();
+  const [editingTip, setEditingTip] = useState<boolean>(false);
+  const [tipInput, setTipInput] = useState<string>('');
 
   const order = orderId ? getOrder(orderId) : undefined;
+
+  // Initialize tip from order when order is loaded
+  useEffect(() => {
+    if (order) {
+      setTipInput(order.tip > 0 ? order.tip.toString() : '');
+    }
+  }, [order?.id]);
 
   if (loading) {
     return (
@@ -45,7 +54,22 @@ const InStore: React.FC = () => {
     }
   };
 
+  const handleSaveTip = async () => {
+    if (!orderId) return;
+    try {
+      const tipAmount = parseFloat(tipInput) || 0;
+      await updateTip(orderId, tipAmount);
+      setEditingTip(false);
+    } catch (error) {
+      console.error('Error updating tip:', error);
+      alert('Failed to update tip. Please try again.');
+    }
+  };
+
   const packagedCount = order.orders.filter(o => o.packaged).length;
+  const tipAmount = order.tip || 0;
+  const numberOfPeople = order.orders.length;
+  const tipPerPerson = numberOfPeople > 0 ? tipAmount / numberOfPeople : 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 px-3">
@@ -71,6 +95,69 @@ const InStore: React.FC = () => {
               <p className="text-lg font-bold text-green-600">{packagedCount}/{order.orders.length}</p>
             </div>
           </div>
+        </div>
+
+        {/* Tip Section */}
+        <div className="bg-white rounded-xl shadow-md p-4 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold text-gray-900">💰 Tip</h2>
+            {!editingTip && (
+              <button
+                onClick={() => setEditingTip(true)}
+                className="text-gray-500 hover:text-indigo-600 transition text-sm"
+                title="Edit Tip"
+              >
+                ✏️ Edit
+              </button>
+            )}
+          </div>
+          
+          {editingTip ? (
+            <div className="space-y-3">
+              <div className="flex gap-2 items-center">
+                <span className="text-xl font-bold text-gray-700">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={tipInput}
+                  onChange={(e) => setTipInput(e.target.value)}
+                  placeholder="0.00"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-lg"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveTip}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+                >
+                  ✓ Save
+                </button>
+                <button
+                  onClick={() => {
+                    setTipInput(order.tip > 0 ? order.tip.toString() : '');
+                    setEditingTip(false);
+                  }}
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg transition"
+                >
+                  ✕ Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Tip:</span>
+                <span className="text-2xl font-bold text-yellow-700">${tipAmount.toFixed(2)}</span>
+              </div>
+              {tipAmount > 0 && numberOfPeople > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Per Person ({numberOfPeople} people):</span>
+                  <span className="font-semibold text-yellow-600">${tipPerPerson.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Orders List - Mobile Optimized */}
