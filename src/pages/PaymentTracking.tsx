@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 
+interface Coin {
+  id: number;
+  left: number;
+  delay: number;
+  duration: number;
+}
+
 const PaymentTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { getOrder, updateIndividualOrder, updateTip, updateVenmoId, loading } = useAppContext();
@@ -12,6 +19,7 @@ const PaymentTracking: React.FC = () => {
   const [tipSaved, setTipSaved] = useState<boolean>(false);
   const [editingVenmo, setEditingVenmo] = useState<boolean>(false);
   const [venmoId, setVenmoId] = useState<string>('');
+  const [coins, setCoins] = useState<Coin[]>([]);
 
   // Initialize tip from order when order is loaded
   useEffect(() => {
@@ -91,9 +99,31 @@ const PaymentTracking: React.FC = () => {
   const totalCollected = order.orders.filter(o => o.paid).reduce((sum, o) => sum + o.total + tipPerPerson, 0);
   const paidCount = order.orders.filter(o => o.paid).length;
 
+  const triggerCoinAnimation = () => {
+    const newCoins: Coin[] = [];
+    for (let i = 0; i < 50; i++) {
+      newCoins.push({
+        id: Date.now() + i,
+        left: Math.random() * 100,
+        delay: Math.random() * 0.5,
+        duration: 1 + Math.random() * 0.5
+      });
+    }
+    setCoins(newCoins);
+    
+    // Clear coins after animation
+    setTimeout(() => {
+      setCoins([]);
+    }, 3000);
+  };
+
   const handleTogglePaid = async (individualOrderId: string, currentStatus: boolean) => {
     try {
       await updateIndividualOrder(orderId!, individualOrderId, { paid: !currentStatus });
+      // Trigger coin animation when marking as paid
+      if (!currentStatus) {
+        triggerCoinAnimation();
+      }
     } catch (error) {
       console.error('Error updating payment status:', error);
       alert('Failed to update payment status. Please try again.');
@@ -343,6 +373,42 @@ const PaymentTracking: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Coin Animation */}
+      {coins.map((coin) => (
+        <div
+          key={coin.id}
+          className="coin"
+          style={{
+            position: 'fixed',
+            left: `${coin.left}%`,
+            bottom: '-50px',
+            fontSize: '40px',
+            animation: `coinFly ${coin.duration}s ease-out ${coin.delay}s forwards`,
+            zIndex: 9999,
+            pointerEvents: 'none'
+          }}
+        >
+          🪙
+        </div>
+      ))}
+
+      <style>{`
+        @keyframes coinFly {
+          0% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 1;
+          }
+          50% {
+            transform: translateY(-600px) rotate(720deg);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(calc(100vh - 100px)) rotate(1080deg);
+            opacity: 0.8;
+          }
+        }
+      `}</style>
     </div>
   );
 };
