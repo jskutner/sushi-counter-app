@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { QRCodeSVG } from 'qrcode.react';
 
 const PaymentTracking: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -98,29 +97,13 @@ const PaymentTracking: React.FC = () => {
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">💰 Payment Tracking</h1>
-                <p className="text-gray-600">{order.date}</p>
-                {order.venmoId && (
-                  <p className="text-lg text-gray-700 mt-2">
-                    <span className="font-semibold">Pay to:</span> {order.venmoId}
-                  </p>
-                )}
-              </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">💰 Payment Tracking</h1>
+              <p className="text-gray-600">{order.date}</p>
               {order.venmoId && (
-                <div className="flex flex-col items-center gap-1">
-                  <label className="text-xs font-semibold text-gray-700">Scan to Pay</label>
-                  <a
-                    href={`https://venmo.com/${order.venmoId.replace('@', '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-white p-2 rounded-lg border border-blue-300 hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer"
-                    title="Open in Venmo"
-                  >
-                    <QRCodeSVG value={`https://venmo.com/${order.venmoId.replace('@', '')}`} size={100} />
-                  </a>
-                </div>
+                <p className="text-lg text-gray-700 mt-2">
+                  <span className="font-semibold">Pay to:</span> {order.venmoId}
+                </p>
               )}
             </div>
             <button
